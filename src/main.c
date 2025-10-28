@@ -12,6 +12,8 @@ char* ReadFileData(char* path) {
     rewind(fp);
 
     char* file_buffer = malloc((file_length+1)*sizeof(char));
+    ASSERT(file_buffer != NULL, "Could not allocate memory for filebuffer when loading file: '%s'", path);
+
     fread(file_buffer, file_length, 1, fp);
     file_buffer[file_length] = '\0';
 
