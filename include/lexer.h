@@ -5,9 +5,15 @@
 
 #define LEXEME_MAX_LENGTH 32
 
-typedef struct {
-    char lexeme[LEXEME_MAX_LENGTH-1];
+typedef enum {
 
+
+} TokenType;
+
+typedef struct {
+    unsigned int line;
+    TokenType type;
+    char lexeme[LEXEME_MAX_LENGTH-1];
 } Token;
 
 typedef struct {
