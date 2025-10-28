@@ -2,28 +2,22 @@
 #include <stdlib.h>
 #include "./../include/compiler.h"
 
-size_t GetFileLength(char* path) {
+char* ReadFileData(char* path) {
     FILE* fp = fopen(path, "r");
 
     ASSERT(fp != NULL, "Failed to open file: '%s'", path);
 
     fseek(fp, 0, SEEK_END);
-    size_t file_length = ftell(fp) + 1; // For the "\0"
+    size_t file_length = ftell(fp);
     rewind(fp);
 
-    fclose(fp);
-
-    return file_length;
-}
-
-void GetFileData(char* path, char* dest, size_t file_length) {
-    FILE* fp = fopen(path, "r");
-
-    ASSERT(fp != NULL, "Failed to open file: '%s'", path);
-
-    fread(dest, file_length, 1, fp);
+    char* file_buffer = malloc((file_length+1)*sizeof(char));
+    fread(file_buffer, file_length, 1, fp);
+    file_buffer[file_length] = '\0';
 
     fclose(fp);
+
+    return file_buffer;
 }
 
 int main(int argc, char* argv[]) {
@@ -32,11 +26,11 @@ int main(int argc, char* argv[]) {
         return -1;
     }
 
-    size_t file_length = GetFileLength(argv[1]);
-    char source[file_length];
-    GetFileData(argv[1], source, file_length);
+    char* source = ReadFileData(argv[1]);
 
     printf("%s\n", source);
+
+    free(source);
 
     return 0;
 }
