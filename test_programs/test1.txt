@@ -1,2 +1,9 @@
 ( Test 1 )
-: SQUARED dup *;
+: SQUARED dup * ;
+
+: MAIN
+    5 squareD
+    6 SQUARED
+    0x11 squared
+    1 squared (comment) 5 SqUaReD
+;

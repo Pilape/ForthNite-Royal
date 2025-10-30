@@ -1,8 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include "./../include/compiler.h"
+#include "../include/compiler.h"
+#include "../include/lexer.h"
 
-char* ReadFileData(char* path) {
+static char* ReadFileData(char* path) {
     FILE* fp = fopen(path, "r");
 
     ASSERT(fp != NULL, "Failed to open file: '%s'", path);
@@ -29,6 +30,7 @@ int main(int argc, char* argv[]) {
     }
 
     char* source = ReadFileData(argv[1]);
+    /*TokenList tokens = */Scan(source);
 
     printf("%s\n", source);
 
