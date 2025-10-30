@@ -3,17 +3,17 @@
 #include "../include/compiler.h"
 #include "../include/lexer.h"
 
-static char* ReadFileData(char* path) {
+static char* ReadFileData(const char* path) {
     FILE* fp = fopen(path, "r");
 
-    ASSERT(fp != NULL, "Failed to open file: '%s'", path);
+    ASSERT_FORMAT(fp != NULL, "Failed to open file: '%s'", path);
 
     fseek(fp, 0, SEEK_END);
     size_t file_length = ftell(fp);
     rewind(fp);
 
     char* file_buffer = malloc((file_length+1)*sizeof(char));
-    ASSERT(file_buffer != NULL, "Could not allocate memory for filebuffer when loading file: '%s'", path);
+    ASSERT_FORMAT(file_buffer != NULL, "Could not allocate memory for filebuffer when loading file: '%s'", path);
 
     fread(file_buffer, file_length, 1, fp);
     file_buffer[file_length] = '\0';
