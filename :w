@@ -1,0 +1,24 @@
+import argparse
+
+def GetArgs():
+    parser = argparse.ArgumentParser(
+        prog="FORTHNITE ROYAL",
+        description="A compiled FORTH-like language for the MONKEDORE-64"
+    )
+    parser.add_argument("input", type=str, action="store", help="Input file to compile")
+    parser.add_argument("-o", "--output", required=True, type=str, action="store", help="Name of output file")
+    return parser.parse_args()
+
+def GetFileContents(path: str) -> str:
+    try:
+        with open(path) as file :
+            return file.read()
+    except:
+        print(f"[ERROR]: Could not open file: '{args.input}'")
+        exit(-1)
+
+
+
+# Program starts here
+args = GetArgs()
+source = GetFileContents(args.input)

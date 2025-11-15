@@ -1,0 +1,14 @@
+(Comment)
+
+: WORD dup + ;
+
+()
+
+: main
+    25 dUp WORD word
+    25 20 - (comment with whitespace.
+    It is also,
+    multiline
+    ) 255 !
+    1 1 NAND if 25 dup 15 dup + then 1024 !
+;
