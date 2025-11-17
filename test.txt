@@ -6,9 +6,9 @@
 
 : main
     25 dUp WORD word
-    25 20 - (comment with whitespace.
+    25 0b101100 - (comment with whitespace.
     It is also,
     multiline
-    ) 255 !
-    1 1 NAND if 25 dup 15 dup + then 1024 !
+    ) 0xFF !
+    1 1 NAND if 25 dup 0o217 dup + then 0X100 !
 ;

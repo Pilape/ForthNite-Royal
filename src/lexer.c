@@ -2,6 +2,7 @@
 #include "../include/compiler.h"
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 #include <stdbool.h>
 
 static TokenList TokenListCreate(unsigned int start_capacity) {
@@ -75,7 +76,7 @@ static void FetchLexemes(char* program, TokenList* tokens) {
 
                 char lexeme[token_length+1];
                 for (int i=0; i<token_length; i++) {
-                    lexeme[i] = program[start+i];
+                    lexeme[i] = toupper(program[start+i]);
                 }
                 lexeme[token_length] = '\0';
                 if (token_length > LEXEME_MAX_LENGTH+1) { 
@@ -97,12 +98,76 @@ static void FetchLexemes(char* program, TokenList* tokens) {
     if (has_errored) exit(-1); 
 }
 
+static bool StrIsDecimal(char* str) {
+    size_t str_length = strlen(str);
+    for (int i=0; i<str_length; i++) {
+        if (!isdigit(str[i])) return false;
+    }
+    return true;
+}
+
+static bool StrIsHex(char* str) {
+    size_t str_length = strlen(str);
+    for (int i=2; /* skip '0x' prefix */ i<str_length; i++) {
+        if (!isdigit(str[i])) {
+            if (str[i] < 'A' || str[i] > 'F') return false;
+        }
+    }
+    return true;
+}
+
+static void AssignTypes(TokenList* tokens) {
+    for (int i=0; i<tokens->length; i++) {
+        Token* token = &tokens->data[i];
+
+        if (strcmp(token->lexeme, ":") == 0) {
+            token->type = FUNC_START;
+            continue;
+        }
+
+        if (strcmp(token->lexeme, ";") == 0) {
+            token->type = FUNC_END;
+            continue;
+        }
+
+        // Is it a base-10 number??
+        if (StrIsDecimal(token->lexeme)) {
+            token->type = NUM_DEC;
+            continue;
+        }
+
+        // Other number formats (hex, binary, octal)
+        if (token->lexeme[0] == '0') {
+            switch (token->lexeme[1]) {
+                // hex
+                case 'X': 
+                    if (StrIsHex(token->lexeme)) {
+                        token->type = NUM_HEX;
+                    }
+                    break;
+
+                // binary
+                case 'B': break;
+
+                // octal
+                case 'O': break;
+            
+            }
+
+        }
+
+        // Default
+        token->type = WORD;
+    }
+}
+
 TokenList Scan(char* program) {
     TokenList tokens = TokenListCreate(16);
     FetchLexemes(program, &tokens);
+    AssignTypes(&tokens);
 
     for (int i=0; i<tokens.length; i++) {
-        printf("Line: %d, Lexeme: %s Type: %d\n", tokens.data[i].line, tokens.data[i].lexeme, tokens.data[i].type);
+        printf("| Line: %2d | Lexeme: %31s | Type: %d |\n", tokens.data[i].line, tokens.data[i].lexeme, tokens.data[i].type);
     }
     return tokens;
 }

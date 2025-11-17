@@ -7,8 +7,11 @@
 
 typedef enum {
     FUNC_START,
-    FUN_END,
-    NUMBER,
+    FUNC_END,
+    NUM_DEC,
+    NUM_HEX,
+    NUM_OCT,
+    NUM_BIN,
     WORD,
 } TokenType;
 
