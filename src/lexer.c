@@ -76,7 +76,7 @@ static void FetchLexemes(char* program, TokenList* tokens) {
 
                 char lexeme[token_length+1];
                 for (int i=0; i<token_length; i++) {
-                    lexeme[i] = toupper(program[start+i]);
+                    lexeme[i] = tolower(program[start+i]);
                 }
                 lexeme[token_length] = '\0';
                 if (token_length > LEXEME_MAX_LENGTH+1) { 
@@ -110,13 +110,31 @@ static bool StrIsHex(char* str) {
     size_t str_length = strlen(str);
     for (int i=2; /* skip '0x' prefix */ i<str_length; i++) {
         if (!isdigit(str[i])) {
-            if (str[i] < 'A' || str[i] > 'F') return false;
+            if (str[i] < 'a' || str[i] > 'f') return false;
         }
     }
     return true;
 }
 
+static bool StrIsBin(char* str) {
+    size_t str_length = strlen(str);
+    for (int i=2; /* skip '0x' prefix */ i<str_length; i++) {
+        if (str[i] != '0' && str[i] != '1') return false;
+    }
+    return true;
+}
+
+static bool StrIsOct(char* str) {
+    size_t str_length = strlen(str);
+    for (int i=2; /* skip '0x' prefix */ i<str_length; i++) {
+        if (str[i] < '0' || str[i] > '7') return false;
+    }
+    return true;
+}
+
 static void AssignTypes(TokenList* tokens) {
+    bool has_errored = false;
+
     for (int i=0; i<tokens->length; i++) {
         Token* token = &tokens->data[i];
 
@@ -140,25 +158,42 @@ static void AssignTypes(TokenList* tokens) {
         if (token->lexeme[0] == '0') {
             switch (token->lexeme[1]) {
                 // hex
-                case 'X': 
+                case 'x': 
                     if (StrIsHex(token->lexeme)) {
                         token->type = NUM_HEX;
+                    } else {
+                        printf("[ERROR]: '%s' at line %d is not a valid hexadecimal number\n", token->lexeme, token->line);
+                        has_errored = true;
                     }
-                    break;
+                    continue;
 
                 // binary
-                case 'B': break;
+                case 'b': 
+                    if (StrIsBin(token->lexeme)) {
+                        token->type = NUM_BIN;
+                    } else {
+                        printf("[ERROR]: '%s' at line %d is not a valid binary number\n", token->lexeme, token->line);
+                        has_errored = true;
+                    }
+                    continue;
 
                 // octal
-                case 'O': break;
+                case 'o': 
+                    if (StrIsOct(token->lexeme)) {
+                        token->type = NUM_OCT;
+                    } else {
+                        printf("[ERROR]: '%s' at line %d is not a valid octal number\n", token->lexeme, token->line);
+                        has_errored = true;
+                    }
+                    continue;
             
             }
 
         }
-
         // Default
         token->type = WORD;
     }
+    if (has_errored) exit(-1);
 }
 
 TokenList Scan(char* program) {

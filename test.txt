@@ -9,6 +9,6 @@
     25 0b101100 - (comment with whitespace.
     It is also,
     multiline
-    ) 0xFF !
+    ) 0xfF !
     1 1 NAND if 25 dup 0o217 dup + then 0X100 !
 ;
