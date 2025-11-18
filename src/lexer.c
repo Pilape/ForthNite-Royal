@@ -201,8 +201,5 @@ TokenList Scan(char* program) {
     FetchLexemes(program, &tokens);
     AssignTypes(&tokens);
 
-    for (int i=0; i<tokens.length; i++) {
-        printf("| Line: %2d | Lexeme: %31s | Type: %d |\n", tokens.data[i].line, tokens.data[i].lexeme, tokens.data[i].type);
-    }
     return tokens;
 }

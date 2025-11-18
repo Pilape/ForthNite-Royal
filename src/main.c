@@ -30,11 +30,9 @@ int main(int argc, char* argv[]) {
     }
 
     char* source = ReadFileData(argv[1]);
-    /*TokenList tokens = */Scan(source);
-
-    printf("%s\n", source);
-
+    TokenList tokens = Scan(source);
     free(source);
+    free(tokens.data);
 
     return 0;
 }
