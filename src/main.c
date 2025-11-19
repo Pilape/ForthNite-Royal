@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include "../include/compiler.h"
 #include "../include/lexer.h"
+#include "../include/codegen.h"
 
 static char* ReadFileData(const char* path) {
     FILE* fp = fopen(path, "r");
@@ -32,6 +33,8 @@ int main(int argc, char* argv[]) {
     char* source = ReadFileData(argv[1]);
     TokenList tokens = Scan(source);
     free(source);
+    Rom output_code = { 0 };
+    GenerateCode(&tokens, &output_code);
     free(tokens.data);
 
     return 0;
