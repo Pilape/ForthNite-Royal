@@ -3,6 +3,8 @@
 #include <stdbool.h>
 #include <stdio.h>
 
+#define ARR_LEN(arr) (sizeof(arr)/sizeof(arr[0]))
+
 typedef enum {
     IF_STATEMENT, LOOP,
 } ControlFlowType;
@@ -53,6 +55,13 @@ static inline bool StringInArr(char* str, char* arr[], size_t arr_len) {
     return false;
 }
 
+static inline uint8_t StringIndex(char* str, char* arr[], size_t arr_len) {
+    for (int i=0; i<arr_len; i++) {
+        if (strcmp(str, arr[i]) == 0) return i;
+    }
+    return 0;
+}
+
 void GenerateCode(const TokenList* src, Rom* dest) {
 
     enum {
@@ -92,7 +101,7 @@ void GenerateCode(const TokenList* src, Rom* dest) {
 
     char* control_flow_primitives[] = {
         "if", "else", "then",
-        "begin", "until", "while, repeat",
+        "do", "until", "while", 
         "again", "leave",
     };
 
@@ -128,7 +137,16 @@ void GenerateCode(const TokenList* src, Rom* dest) {
                 break;
 
             case WORD:
-                break;
+                if (StringInArr(token.lexeme, instruction_primitives, ARR_LEN(instruction_primitives))) {
+                    EmitByte(dest, StringIndex(token.lexeme, instruction_primitives, ARR_LEN(instruction_primitives)));
+                    break;
+                }
+
+                if (StringInArr(token.lexeme, control_flow_primitives, ARR_LEN(control_flow_primitives))) {
+                    printf("control flow: %s\n", token.lexeme);
+                    break;
+                }
+               break;
                 
         
         }

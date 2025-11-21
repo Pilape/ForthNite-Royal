@@ -11,4 +11,6 @@
     multiline
     ) 0xfF !
     1 1 NAND if 25 dup 0o217 dup + then 0X100 !
+    1 do 1 + 25 < while pop
+    1 do 1 + 15 > until pop
 ;
