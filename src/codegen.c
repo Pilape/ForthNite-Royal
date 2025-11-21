@@ -1,4 +1,5 @@
 #include "../include/codegen.h"
+#include <stdint.h>
 #include <string.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -33,6 +34,24 @@ static inline ControlFlowLabel ControlFlowStackPeek(ControlFlowStack* stack) {
     return stack->data[stack->ptr-1];
 }
 
+typedef enum {
+    NOP,    HALT,
+    PUSH,   DUP,
+    OVER,   POP,
+    NIP,    SWAP,
+    ROT,    LOAD,
+    STORE,  LOADb,
+    STOREb, ADD,
+    SUB,    ADDc,
+    SUBc,   SHL,
+    SHR,    bNAND,
+    NAND,   EQUAL,
+    MORE,   LESS,
+    JUMP,   BRANCH,
+    BIF0,   BIFN0,
+    CALL,   RET
+} Instruction;
+
 static inline void EmitByte(Rom* dest, uint8_t byte) {
     if (dest->size >= ROM_SIZE_MAX) {
         printf("[ERROR]: Program size exceeds rom size limit\n");
@@ -62,26 +81,24 @@ static inline uint8_t StringIndex(char* str, char* arr[], size_t arr_len) {
     return 0;
 }
 
+static inline void AssertIntLimit(uint32_t num, Token token, bool* has_errored) {
+    if (num > 0xFFFF) {
+        printf("[ERROR]: The number: '%s' at line %d is too large (exceeds 16-bit int limit)\n", token.lexeme, token.line);
+        *has_errored = true;
+    }
+}
+
+static inline void EmitPushNum(Rom* dest, Token token, char* format, bool* has_errored) {
+    EmitByte(dest, PUSH);
+
+    uint32_t number = 0;
+    sscanf(token.lexeme, format, &number);
+    AssertIntLimit(number, token, has_errored);
+
+    EmitWord(dest, (uint16_t)number);
+}
+
 void GenerateCode(const TokenList* src, Rom* dest) {
-
-    enum {
-        NOP,    HALT,
-        PUSH,   DUP,
-        OVER,   POP,
-        NIP,    SWAP,
-        ROT,    LOAD,
-        STORE,  LOADb,
-        STOREb, ADD,
-        SUB,    ADDc,
-        SUBc,   SHL,
-        SHR,    bNAND,
-        NAND,   EQUAL,
-        MORE,   LESS,
-        JUMP,   BRANCH,
-        BIF0,   BIFN0,
-        CALL,   RET
-    } Instruction;
-
     // Primitives are words that are defined in the language itself
     // They can be overwritten by code, however it will cause a warning. TODO: Add a flag to hide warnings
     char* instruction_primitives[] = {
@@ -128,12 +145,29 @@ void GenerateCode(const TokenList* src, Rom* dest) {
                 break;
 
             case NUM_BIN:
+                EmitPushNum(dest, token, "%b", &has_errored);
                 break;
+
             case NUM_DEC:
+                EmitPushNum(dest, token, "%d", &has_errored);
                 break;
-            case NUM_OCT:
+
+            case NUM_OCT: {
+                EmitByte(dest, PUSH);
+
+                uint32_t number = 0;
+
+                sscanf(token.lexeme, "%d", &number);
+                printf("OCT: %d\n", number);
+                AssertIntLimit(number, token, &has_errored);
+
+                EmitWord(dest, (uint16_t)number);
+
                 break;
-            case NUM_HEX:
+            }
+
+            case NUM_HEX: 
+                EmitPushNum(dest, token, "%x", &has_errored);
                 break;
 
             case WORD:
