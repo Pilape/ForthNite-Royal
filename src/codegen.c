@@ -167,7 +167,9 @@ void GenerateCode(const TokenList* src, Rom* dest) {
         "again", "leave",
     };
 
-    dest->size = 3; // Reserve space for calling 'main'
+    dest->size = 4; // Reserve space for calling 'main' + a HALT instruction
+    dest->data[0] = CALL;
+    dest->data[3] = HALT;
 
     WordList words = { 0 };
 
@@ -236,6 +238,12 @@ void GenerateCode(const TokenList* src, Rom* dest) {
                 break;
 
             case WORD:
+                if (NameInWordList(token.lexeme, &words)) {
+                    EmitByte(dest, CALL);
+                    EmitWord(dest, words.data[NameIndex(token.lexeme, &words)].address);
+                    break;
+                }
+
                 if (StringInArr(token.lexeme, instruction_primitives, ARR_LEN(instruction_primitives))) {
                     EmitByte(dest, StringIndex(token.lexeme, instruction_primitives, ARR_LEN(instruction_primitives)));
                     break;
@@ -250,5 +258,6 @@ void GenerateCode(const TokenList* src, Rom* dest) {
         
         }
     }
+    if (has_errored) exit(-1);
 }
 
