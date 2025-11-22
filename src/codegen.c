@@ -147,16 +147,19 @@ void GenerateCode(const TokenList* src, Rom* dest) {
                 if (in_word_definition) {
                     printf("[ERROR]: ':' found inside of word definition at line %d\n", token.line);
                     has_errored = true;
+                } else {
+                    in_word_definition = true;
                 }
-                in_word_definition = true;
                 break;
 
             case FUNC_END:
                 if (!in_word_definition) {
                     printf("[ERROR]: ';' found outside of word definition at line %d\n", token.line);
                     has_errored = true;
+                } else {
+                    EmitByte(dest, RET);
+                    in_word_definition = false;
                 }
-                in_word_definition = false;
                 break;
 
             case NUM_BIN:
