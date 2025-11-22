@@ -200,7 +200,6 @@ void GenerateCode(const TokenList* src, Rom* dest) {
                         printf("[WARNING]: Word '%s' at line %d overwrites a previously defined word\n", token.lexeme, token.line);
                     }
                     WordListInsert(token.lexeme, dest->size, &words);
-                    printf("%s @ %04x\n", token.lexeme, dest->size);
 
                     in_word_definition = true;
                 }
@@ -250,7 +249,6 @@ void GenerateCode(const TokenList* src, Rom* dest) {
                 }
 
                 if (StringInArr(token.lexeme, control_flow_primitives, ARR_LEN(control_flow_primitives))) {
-                    printf("control flow: %s\n", token.lexeme);
                     break;
                 }
                break;

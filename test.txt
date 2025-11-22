@@ -1,5 +1,4 @@
 (Comment)
-
 : WORD dup + ;
 
 ()
