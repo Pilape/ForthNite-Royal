@@ -28,8 +28,7 @@ static inline void ControlFlowStackPush(ControlFlowStack* stack, ControlFlowType
 
 static inline ControlFlowLabel ControlFlowStackPop(ControlFlowStack* stack) {
     stack->ptr--;
-    return stack->data[stack->ptr];
-}
+    return stack->data[stack->ptr]; }
 
 static inline ControlFlowLabel ControlFlowStackPeek(ControlFlowStack* stack) {
     return stack->data[stack->ptr-1];
@@ -68,6 +67,36 @@ static inline void EmitWord(Rom* dest, uint16_t word) {
     dest->data[dest->size++] = word & 0xFF;
 }
 
+typedef struct {
+    struct {
+        char name[LEXEME_MAX_LENGTH+1];
+        uint16_t address;
+    } data[0xFFFF]; // I refuse to use the heap
+
+    uint16_t size;
+} WordList;
+
+static inline void WordListInsert(char* name, uint16_t address, WordList* list) {
+    list->data[list->size].address = address;
+    strcpy(list->data[list->size].name, name);
+    list->size++;
+}
+
+static inline bool NameInWordList(char* name, WordList* list) {
+    for (int i=0; i<list->size; i++) {
+        if (strcmp(name, list->data[i].name) == 0) return true;
+    }
+    return false;
+}
+
+// We assume that the name exists within the list because 'NameInWordList' is called first
+static inline uint16_t NameIndex(char* name, WordList* list) {
+    for (int i=0; i<list->size; i++) {
+        if (strcmp(name, list->data[i].name) == 0) return i;
+    }
+    return 0;
+}
+
 static inline bool StringInArr(char* str, char* arr[], size_t arr_len) {
     for (int i=0; i<arr_len; i++) {
         if (strcmp(str, arr[i]) == 0) return true;
@@ -75,6 +104,7 @@ static inline bool StringInArr(char* str, char* arr[], size_t arr_len) {
     return false;
 }
 
+// We make the same assumptions as 'NameIndex'
 static inline uint8_t StringIndex(char* str, char* arr[], size_t arr_len) {
     for (int i=0; i<arr_len; i++) {
         if (strcmp(str, arr[i]) == 0) return i;
@@ -137,6 +167,10 @@ void GenerateCode(const TokenList* src, Rom* dest) {
         "again", "leave",
     };
 
+    dest->size = 3; // Reserve space for calling 'main'
+
+    WordList words = { 0 };
+
     bool has_errored = false;
     bool in_word_definition = false;
     for (int i=0; i<src->length; i++) {
@@ -148,6 +182,24 @@ void GenerateCode(const TokenList* src, Rom* dest) {
                     printf("[ERROR]: ':' found inside of word definition at line %d\n", token.line);
                     has_errored = true;
                 } else {
+                    // Creating new word
+                    // Are we overwriting words?
+                    token = src->data[++i];
+                    if (token.type != WORD) {
+                        printf("[ERROR]: Word '%s' at line %d has an invalid name. Word names cannot a number, ':' or ';'\n", token.lexeme, token.line);
+                        bool has_errored = true;
+                    }
+
+                    if (StringInArr(token.lexeme, control_flow_primitives, ARR_LEN(control_flow_primitives)) || 
+                    StringInArr(token.lexeme, instruction_primitives, ARR_LEN(instruction_primitives))) {
+                        printf("[WARNING]: Word '%s' at line %d overwrites a primitive word\n", token.lexeme, token.line);
+                    }
+                    if (NameInWordList(token.lexeme, &words)) {
+                        printf("[WARNING]: Word '%s' at line %d overwrites a previously defined word\n", token.lexeme, token.line);
+                    }
+                    WordListInsert(token.lexeme, dest->size, &words);
+                    printf("%s @ %04x\n", token.lexeme, dest->size);
+
                     in_word_definition = true;
                 }
                 break;
