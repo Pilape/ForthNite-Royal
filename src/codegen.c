@@ -3,6 +3,7 @@
 #include <string.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include <math.h>
 
 #define ARR_LEN(arr) (sizeof(arr)/sizeof(arr[0]))
 
@@ -81,6 +82,20 @@ static inline uint8_t StringIndex(char* str, char* arr[], size_t arr_len) {
     return 0;
 }
 
+// We assume the string is a valid octal number since the compiler checks it in the scanning stage
+static inline uint32_t StringToOct(char* str) {
+    uint32_t octal_number = 0;
+
+    int str_length = strlen(str);
+    int j = 0;
+    for (int i=str_length-1; i>=2;/* Ignore prefix */ i--) {
+        int digit = str[i] - 48;
+        octal_number += digit * pow(8, j);
+        j++;
+    }
+    return octal_number;
+}
+
 static inline void AssertIntLimit(uint32_t num, Token token, bool* has_errored) {
     if (num > 0xFFFF) {
         printf("[ERROR]: The number: '%s' at line %d is too large (exceeds 16-bit int limit)\n", token.lexeme, token.line);
@@ -145,6 +160,7 @@ void GenerateCode(const TokenList* src, Rom* dest) {
                 break;
 
             case NUM_BIN:
+                // Address sanitizer gives a warning, but it works fine so just ignore it
                 EmitPushNum(dest, token, "%b", &has_errored);
                 break;
 
@@ -154,15 +170,9 @@ void GenerateCode(const TokenList* src, Rom* dest) {
 
             case NUM_OCT: {
                 EmitByte(dest, PUSH);
-
-                uint32_t number = 0;
-
-                sscanf(token.lexeme, "%d", &number);
-                printf("OCT: %d\n", number);
+                uint32_t number = StringToOct(token.lexeme);
                 AssertIntLimit(number, token, &has_errored);
-
                 EmitWord(dest, (uint16_t)number);
-
                 break;
             }
 

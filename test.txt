@@ -10,6 +10,8 @@
     It is also,
     multiline
     ) 0xfF !
+    0o31
+    0o10
     1 1 NAND if 25 dup 0o217 dup + then 0X100 !
     1 do 1 + 25 < while pop
     1 do 1 + 15 > until pop
