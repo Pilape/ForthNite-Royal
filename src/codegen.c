@@ -179,7 +179,7 @@ void GenerateCode(const TokenList* src, Rom* dest) {
                     // Are we overwriting words?
                     token = src->data[++i];
                     if (token.type != WORD) {
-                        printf("[ERROR]: Word '%s' at line %d has an invalid name. Word names cannot a number, ':' or ';'\n", token.lexeme, token.line);
+                        printf("[ERROR]: Word '%s' at line %d has an invalid name. Word names cannot a number, ':', ';' or any control flow words\n", token.lexeme, token.line);
                         bool has_errored = true;
                     }
 
@@ -188,8 +188,16 @@ void GenerateCode(const TokenList* src, Rom* dest) {
                     }
                     if (NameInWordList(token.lexeme, &words)) {
                         printf("[WARNING]: Word '%s' at line %d overwrites a previously defined word\n", token.lexeme, token.line);
+                        words.data[NameIndex(token.lexeme, &words)].address = dest->size;
+                    } else { 
+                        WordListInsert(token.lexeme, dest->size, &words);
                     }
-                    WordListInsert(token.lexeme, dest->size, &words);
+                    if (strcmp(token.lexeme, "main") == 0) {
+                        uint16_t address = dest->size;
+                        dest->size = 1;
+                        EmitWord(dest, address);
+                        dest->size = address; 
+                    }
 
                     in_word_definition = true;
                 }
@@ -205,8 +213,8 @@ void GenerateCode(const TokenList* src, Rom* dest) {
 
                     for (int i=loops.ptr; i>0; i--) {
                         printf("[ERROR]: Loop at line %d is unterminated\n", PopLoopStack(&loops).line);
-                    has_errored = true;
-    }
+                        has_errored = true;
+                    }
 
                 }
                 break;
@@ -293,6 +301,7 @@ void GenerateCode(const TokenList* src, Rom* dest) {
             }
 
             case LOOP_LEAVE: {
+                
                 break;
             }
 
