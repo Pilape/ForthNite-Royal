@@ -8,10 +8,22 @@
 typedef enum {
     FUNC_START,
     FUNC_END,
+
     NUM_DEC,
     NUM_HEX,
     NUM_OCT,
     NUM_BIN,
+
+    LOOP_START,
+    LOOP_UNTIL,
+    LOOP_WHILE,
+    LOOP_AGAIN,
+    LOOP_LEAVE,
+
+    IF_START,
+    IF_THEN,
+    IF_ELSE,
+
     WORD,
 } TokenType;
 

@@ -8,33 +8,6 @@
 #define ARR_LEN(arr) (sizeof(arr)/sizeof(arr[0]))
 
 typedef enum {
-    IF_STATEMENT, LOOP,
-} ControlFlowType;
-
-typedef struct {
-    ControlFlowType type;
-    uint16_t address;
-} ControlFlowLabel;
-
-typedef struct {
-    ControlFlowLabel data[0xFFFF];
-    int ptr;
-} ControlFlowStack;
-
-static inline void ControlFlowStackPush(ControlFlowStack* stack, ControlFlowType type, uint16_t address) {
-    stack->data[stack->ptr] = (ControlFlowLabel){.type = type, .address = address};
-    stack->ptr++;
-}
-
-static inline ControlFlowLabel ControlFlowStackPop(ControlFlowStack* stack) {
-    stack->ptr--;
-    return stack->data[stack->ptr]; }
-
-static inline ControlFlowLabel ControlFlowStackPeek(ControlFlowStack* stack) {
-    return stack->data[stack->ptr-1];
-}
-
-typedef enum {
     NOP,    HALT,
     PUSH,   DUP,
     OVER,   POP,
@@ -143,6 +116,29 @@ static inline void EmitPushNum(Rom* dest, Token token, char* format, bool* has_e
     EmitWord(dest, (uint16_t)number);
 }
 
+struct LoopInfo {
+    uint16_t address;
+    unsigned int line;
+};
+
+typedef struct {
+    struct LoopInfo data[0xFFFF]; // I love consuming unneccesary RAM
+    uint16_t ptr;
+} LoopStack;
+
+static inline void PushLoopStack(uint16_t address, unsigned int line, LoopStack* stack) {
+    stack->data[stack->ptr] = (struct LoopInfo){.address = address, .line = line};
+    stack->ptr++;
+}
+
+static inline struct LoopInfo PopLoopStack(LoopStack* stack) {
+    return stack->data[--stack->ptr];
+}
+
+static inline struct LoopInfo PeekLoopStack(LoopStack* stack) {
+    return stack->data[stack->ptr-1];
+}
+
 void GenerateCode(const TokenList* src, Rom* dest) {
     // Primitives are words that are defined in the language itself
     // They can be overwritten by code, however it will cause a warning. TODO: Add a flag to hide warnings
@@ -161,17 +157,12 @@ void GenerateCode(const TokenList* src, Rom* dest) {
         ">",      "<",
     };
 
-    char* control_flow_primitives[] = {
-        "if", "else", "then",
-        "do", "until", "while", 
-        "again", "leave",
-    };
-
     dest->size = 4; // Reserve space for calling 'main' + a HALT instruction
     dest->data[0] = CALL;
     dest->data[3] = HALT;
 
     WordList words = { 0 };
+    LoopStack loops = { 0 };
 
     bool has_errored = false;
     bool in_word_definition = false;
@@ -192,8 +183,7 @@ void GenerateCode(const TokenList* src, Rom* dest) {
                         bool has_errored = true;
                     }
 
-                    if (StringInArr(token.lexeme, control_flow_primitives, ARR_LEN(control_flow_primitives)) || 
-                    StringInArr(token.lexeme, instruction_primitives, ARR_LEN(instruction_primitives))) {
+                    if (StringInArr(token.lexeme, instruction_primitives, ARR_LEN(instruction_primitives))) {
                         printf("[WARNING]: Word '%s' at line %d overwrites a primitive word\n", token.lexeme, token.line);
                     }
                     if (NameInWordList(token.lexeme, &words)) {
@@ -211,7 +201,13 @@ void GenerateCode(const TokenList* src, Rom* dest) {
                     has_errored = true;
                 } else {
                     EmitByte(dest, RET);
-                    in_word_definition = false;
+                    in_word_definition = false; 
+
+                    for (int i=loops.ptr; i>0; i--) {
+                        printf("[ERROR]: Loop at line %d is unterminated\n", PopLoopStack(&loops).line);
+                    has_errored = true;
+    }
+
                 }
                 break;
 
@@ -236,6 +232,70 @@ void GenerateCode(const TokenList* src, Rom* dest) {
                 EmitPushNum(dest, token, "%x", &has_errored);
                 break;
 
+            case LOOP_START:
+                PushLoopStack(dest->size, token.line, &loops);
+                break;
+
+            case LOOP_AGAIN: {
+                uint16_t distance_to_start = dest->size - PeekLoopStack(&loops).address;
+                if (distance_to_start <= 127) {
+                    EmitByte(dest, BRANCH);
+                    EmitByte(dest, -distance_to_start);
+                } else {
+                    EmitByte(dest, JUMP);
+                    EmitWord(dest, PeekLoopStack(&loops).address);
+                }
+                break;
+            }
+
+            case LOOP_WHILE: {
+                if (loops.ptr == 0) {
+                    printf("[ERROR]: 'while' found outside of loop at line %d\n", token.line);
+                    has_errored = true;
+                    break;
+                }
+                uint16_t start = PopLoopStack(&loops).address;
+                uint16_t distance_to_start = dest->size - start;
+                if (distance_to_start <= 127) {
+                    EmitByte(dest, BIFN0);
+                    EmitByte(dest, -distance_to_start);
+                } else {
+                    // Skip jump if done
+                    EmitByte(dest, BIF0);
+                    EmitByte(dest, 3);
+                    // Jump
+                    EmitByte(dest, JUMP);
+                    EmitWord(dest, start);
+                }
+                break;
+            }
+
+            case LOOP_UNTIL: {
+                if (loops.ptr == 0) {
+                    printf("[ERROR]: 'until' found outside of loop at line %d\n", token.line);
+                    has_errored = true;
+                    break;
+                }
+                uint16_t start = PopLoopStack(&loops).address;
+                uint16_t distance_to_start = dest->size - start;
+                if (distance_to_start <= 127) {
+                    EmitByte(dest, BIF0);
+                    EmitByte(dest, -distance_to_start);
+                } else {
+                    // Skip jump if done
+                    EmitByte(dest, BIFN0);
+                    EmitByte(dest, 3);
+                    // Jump
+                    EmitByte(dest, JUMP);
+                    EmitWord(dest, start);
+                }
+                break;
+            }
+
+            case LOOP_LEAVE: {
+                break;
+            }
+
             case WORD:
                 if (NameInWordList(token.lexeme, &words)) {
                     EmitByte(dest, CALL);
@@ -245,10 +305,6 @@ void GenerateCode(const TokenList* src, Rom* dest) {
 
                 if (StringInArr(token.lexeme, instruction_primitives, ARR_LEN(instruction_primitives))) {
                     EmitByte(dest, StringIndex(token.lexeme, instruction_primitives, ARR_LEN(instruction_primitives)));
-                    break;
-                }
-
-                if (StringInArr(token.lexeme, control_flow_primitives, ARR_LEN(control_flow_primitives))) {
                     break;
                 }
                break;

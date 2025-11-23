@@ -190,6 +190,42 @@ static void AssignTypes(TokenList* tokens) {
             }
 
         }
+
+        // If statements and loops
+        if (strcmp(token->lexeme, "if") == 0) {
+            token->type = IF_START;
+            continue;
+        }
+        if (strcmp(token->lexeme, "else") == 0) {
+            token->type = IF_START;
+            continue;
+        }
+        if (strcmp(token->lexeme, "then") == 0) {
+            token->type = IF_THEN;
+            continue;
+        }
+
+        if (strcmp(token->lexeme, "do") == 0) {
+            token->type = LOOP_START;
+            continue;
+        }
+        if (strcmp(token->lexeme, "while") == 0) {
+            token->type = LOOP_WHILE;
+            continue;
+        }
+        if (strcmp(token->lexeme, "until") == 0) {
+            token->type = LOOP_UNTIL;
+            continue;
+        }
+        if (strcmp(token->lexeme, "again") == 0) {
+            token->type = LOOP_AGAIN;
+            continue;
+        }
+        if (strcmp(token->lexeme, "leave") == 0) {
+            token->type = LOOP_LEAVE;
+            continue;
+        }
+
         // Default
         token->type = WORD;
     }
