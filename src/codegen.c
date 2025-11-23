@@ -118,6 +118,8 @@ static inline void EmitPushNum(Rom* dest, Token token, char* format, bool* has_e
 
 struct LoopInfo {
     uint16_t address;
+    uint16_t pending_exits[32];
+    uint8_t pending_exit_ptr;
     unsigned int line;
 };
 
@@ -137,6 +139,24 @@ static inline struct LoopInfo PopLoopStack(LoopStack* stack) {
 
 static inline struct LoopInfo PeekLoopStack(LoopStack* stack) {
     return stack->data[stack->ptr-1];
+}
+
+static inline void RegisterLoopExit(uint16_t address, LoopStack* stack, bool* has_errored) {
+    stack->data[stack->ptr-1].pending_exits[stack->data[stack->ptr-1].pending_exit_ptr++] = address;
+
+    if (PeekLoopStack(stack).pending_exit_ptr > 32) {
+        printf("[ERROR]: Too many 'leave' within loop at line %d. Max limit is 32\n", PeekLoopStack(stack).line);
+        *has_errored = true;
+    }
+}
+
+static inline void HandleLoopExits(LoopStack* stack, Rom* dest) {
+    uint16_t address = dest->size;
+    for (int i=0; i<PeekLoopStack(stack).pending_exit_ptr; i++) {
+        dest->size = PeekLoopStack(stack).pending_exits[i];
+        EmitWord(dest, address);  
+    }
+    dest->size = address;
 }
 
 void GenerateCode(const TokenList* src, Rom* dest) {
@@ -262,7 +282,7 @@ void GenerateCode(const TokenList* src, Rom* dest) {
                     has_errored = true;
                     break;
                 }
-                uint16_t start = PopLoopStack(&loops).address;
+                uint16_t start = PeekLoopStack(&loops).address;
                 uint16_t distance_to_start = dest->size - start;
                 if (distance_to_start <= 127) {
                     EmitByte(dest, BIFN0);
@@ -275,6 +295,8 @@ void GenerateCode(const TokenList* src, Rom* dest) {
                     EmitByte(dest, JUMP);
                     EmitWord(dest, start);
                 }
+                HandleLoopExits(&loops, dest);
+                PopLoopStack(&loops);
                 break;
             }
 
@@ -284,7 +306,7 @@ void GenerateCode(const TokenList* src, Rom* dest) {
                     has_errored = true;
                     break;
                 }
-                uint16_t start = PopLoopStack(&loops).address;
+                uint16_t start = PeekLoopStack(&loops).address;
                 uint16_t distance_to_start = dest->size - start;
                 if (distance_to_start <= 127) {
                     EmitByte(dest, BIF0);
@@ -297,11 +319,15 @@ void GenerateCode(const TokenList* src, Rom* dest) {
                     EmitByte(dest, JUMP);
                     EmitWord(dest, start);
                 }
+                HandleLoopExits(&loops, dest);
+                PopLoopStack(&loops);
                 break;
             }
 
             case LOOP_LEAVE: {
-                
+                // TODO: Add support for BRANCH as optimization
+                EmitByte(dest, JUMP);
+                RegisterLoopExit(dest->size, &loops, &has_errored);
                 break;
             }
 
