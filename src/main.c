@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include "../include/compiler.h"
 #include "../include/lexer.h"
 #include "../include/codegen.h"
@@ -24,6 +25,34 @@ static char* ReadFileData(const char* path) {
     return file_buffer;
 }
 
+static void RemoveFileExtension(char* file) {
+    char* end = file + strlen(file);
+
+    while (end > file && *end != '.') {
+        --end;
+    }
+
+    if (end > file) {
+        *end = '\0';
+    }
+}
+
+static void WriteOutputFile(const char* path, Rom* code) {
+    char output_path[strlen(path)+5]; // + '.rom\0'
+    strcpy(output_path, path);
+    RemoveFileExtension(output_path);
+    strcat(output_path, ".rom\0");
+
+    FILE* fp = fopen(output_path, "w");
+
+    ASSERT_FORMAT(fp != NULL, "Failed to create file: '%s'", path);
+
+    for (int i=0; i<code->size; i++) {
+        fprintf(fp, "%02x ", code->data[i]);
+        if (i % 16 == 15) fprintf(fp, "\n");
+    }
+}
+
 int main(int argc, char* argv[]) {
     if (argc < 2) {
         printf("Not enough arguments\n");
@@ -36,6 +65,8 @@ int main(int argc, char* argv[]) {
     Rom output_code = { 0 };
     GenerateCode(&tokens, &output_code);
     free(tokens.data);
+
+    WriteOutputFile(argv[1], &output_code);
 
     return 0;
 }
