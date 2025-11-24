@@ -43,6 +43,21 @@ static void WriteOutputFile(const char* path, Rom* code) {
     RemoveFileExtension(output_path);
     strcat(output_path, ".rom\0");
 
+    FILE* fp = fopen(output_path, "wb");
+
+    ASSERT_FORMAT(fp != NULL, "Failed to create file: '%s'", path);
+
+    fwrite(code, sizeof(Rom), 1, fp);
+
+    fclose(fp);
+}
+
+static void WriteHexDumpFile(const char* path, Rom* code) {
+    char output_path[strlen(path)+5]; // + '.hex\0'
+    strcpy(output_path, path);
+    RemoveFileExtension(output_path);
+    strcat(output_path, ".hex\0");
+
     FILE* fp = fopen(output_path, "w");
 
     ASSERT_FORMAT(fp != NULL, "Failed to create file: '%s'", path);
@@ -51,6 +66,8 @@ static void WriteOutputFile(const char* path, Rom* code) {
         fprintf(fp, "%02x ", code->data[i]);
         if (i % 16 == 15) fprintf(fp, "\n");
     }
+
+    fclose(fp);
 }
 
 int main(int argc, char* argv[]) {
@@ -67,6 +84,7 @@ int main(int argc, char* argv[]) {
     free(tokens.data);
 
     WriteOutputFile(argv[1], &output_code);
+    WriteHexDumpFile(argv[1], &output_code);
 
     return 0;
 }
