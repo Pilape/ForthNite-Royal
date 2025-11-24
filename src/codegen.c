@@ -20,8 +20,8 @@ typedef enum {
     SHR,    bNAND,
     NAND,   EQUAL,
     MORE,   LESS,
-    JUMP,   BRANCH,
-    BIF0,   BIFN0,
+    JUMP,   JIF0, 
+    JIFN0,
     CALL,   RET
 } Instruction;
 
@@ -265,14 +265,8 @@ void GenerateCode(const TokenList* src, Rom* dest) {
                 break;
 
             case LOOP_AGAIN: {
-                uint16_t distance_to_start = dest->size - PeekLoopStack(&loops).address;
-                if (distance_to_start <= 127) {
-                    EmitByte(dest, BRANCH);
-                    EmitByte(dest, -distance_to_start);
-                } else {
-                    EmitByte(dest, JUMP);
-                    EmitWord(dest, PeekLoopStack(&loops).address);
-                }
+                EmitByte(dest, JUMP);
+                EmitWord(dest, PeekLoopStack(&loops).address);
                 break;
             }
 
@@ -282,19 +276,8 @@ void GenerateCode(const TokenList* src, Rom* dest) {
                     has_errored = true;
                     break;
                 }
-                uint16_t start = PeekLoopStack(&loops).address;
-                uint16_t distance_to_start = dest->size - start;
-                if (distance_to_start <= 127) {
-                    EmitByte(dest, BIFN0);
-                    EmitByte(dest, -distance_to_start);
-                } else {
-                    // Skip jump if done
-                    EmitByte(dest, BIF0);
-                    EmitByte(dest, 3);
-                    // Jump
-                    EmitByte(dest, JUMP);
-                    EmitWord(dest, start);
-                }
+                EmitByte(dest, JIFN0);
+                EmitWord(dest, PeekLoopStack(&loops).address);
                 HandleLoopExits(&loops, dest);
                 PopLoopStack(&loops);
                 break;
@@ -306,26 +289,14 @@ void GenerateCode(const TokenList* src, Rom* dest) {
                     has_errored = true;
                     break;
                 }
-                uint16_t start = PeekLoopStack(&loops).address;
-                uint16_t distance_to_start = dest->size - start;
-                if (distance_to_start <= 127) {
-                    EmitByte(dest, BIF0);
-                    EmitByte(dest, -distance_to_start);
-                } else {
-                    // Skip jump if done
-                    EmitByte(dest, BIFN0);
-                    EmitByte(dest, 3);
-                    // Jump
-                    EmitByte(dest, JUMP);
-                    EmitWord(dest, start);
-                }
+                EmitByte(dest, JIF0);
+                EmitWord(dest, PeekLoopStack(&loops).address);
                 HandleLoopExits(&loops, dest);
                 PopLoopStack(&loops);
                 break;
             }
 
             case LOOP_LEAVE: {
-                // TODO: Add support for BRANCH as optimization
                 EmitByte(dest, JUMP);
                 RegisterLoopExit(dest->size, &loops, &has_errored);
                 break;
