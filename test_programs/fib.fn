@@ -1,0 +1,19 @@
+( Fibonnaci sequence )
+
+: not dup nand ; ( n -- !n )
+
+: or not swap not nand ; (n n -- n or n)
+
+: fib ( n -- fibn )
+    dup dup 1 < swap 1 = or not
+    if
+        dup 1 -
+        swap 2 -
+        +
+        fib
+    then
+;
+
+: main 
+    5 fib
+;
