@@ -159,6 +159,29 @@ static inline void HandleLoopExits(LoopStack* stack, Rom* dest) {
     dest->size = address;
 }
 
+struct IfInfo {
+    uint16_t address;
+    unsigned int line;
+};
+
+typedef struct {
+    struct IfInfo data[0xFFFF]; // I love consuming unneccesary RAM
+    uint16_t ptr;
+} IfStack;
+
+static inline void PushIfStack(uint16_t address, unsigned int line, IfStack* stack) {
+    stack->data[stack->ptr] = (struct IfInfo){.address = address, .line = line};
+    stack->ptr++;
+}
+
+static inline struct IfInfo PopIfStack(IfStack* stack) {
+    return stack->data[--stack->ptr];
+}
+
+static inline struct IfInfo PeekIfStack(IfStack* stack) {
+    return stack->data[stack->ptr-1];
+}
+
 void GenerateCode(const TokenList* src, Rom* dest) {
     // Primitives are words that are defined in the language itself
     // They can be overwritten by code, however it will cause a warning. TODO: Add a flag to hide warnings
@@ -183,6 +206,7 @@ void GenerateCode(const TokenList* src, Rom* dest) {
 
     WordList words = { 0 };
     LoopStack loops = { 0 };
+    IfStack if_statements = { 0 };
 
     bool has_errored = false;
     bool in_word_definition = false;
@@ -200,7 +224,7 @@ void GenerateCode(const TokenList* src, Rom* dest) {
                     token = src->data[++i];
                     if (token.type != WORD) {
                         printf("[ERROR]: Word '%s' at line %d has an invalid name. Word names cannot a number, ':', ';' or any control flow words\n", token.lexeme, token.line);
-                        bool has_errored = true;
+                        has_errored = true;
                     }
 
                     if (StringInArr(token.lexeme, instruction_primitives, ARR_LEN(instruction_primitives))) {
@@ -233,6 +257,11 @@ void GenerateCode(const TokenList* src, Rom* dest) {
 
                     for (int i=loops.ptr; i>0; i--) {
                         printf("[ERROR]: Loop at line %d is unterminated\n", PopLoopStack(&loops).line);
+                        has_errored = true;
+                    }
+
+                    for (int i=if_statements.ptr; i>0; i--) {
+                        printf("[ERROR]: If-statement at line %d is unterminated\n", PopIfStack(&if_statements).line);
                         has_errored = true;
                     }
 
@@ -299,6 +328,40 @@ void GenerateCode(const TokenList* src, Rom* dest) {
             case LOOP_LEAVE: {
                 EmitByte(dest, JUMP);
                 RegisterLoopExit(dest->size, &loops, &has_errored);
+                break;
+            }
+
+            case IF_START: 
+                PushIfStack(dest->size, token.line, &if_statements);
+                EmitByte(dest, JIFN0);
+                dest->size += 2; // Reserve space for jump address
+                break;
+
+            case IF_ELSE: {
+                if (if_statements.ptr == 0) {
+                    printf("[ERROR]: 'else' found outside of if-statement at line %d\n", token.line);
+                    has_errored = true;
+                    break;
+                }
+                EmitByte(dest, JUMP);
+                dest->size += 2; // Reserve address for 'then'
+                uint16_t address = dest->size;
+                dest->size = PeekIfStack(&if_statements).address;
+                EmitWord(dest, address);
+                dest->size = address; 
+                break;
+            }
+
+            case IF_THEN: {
+                if(if_statements.ptr == 0) {
+                    printf("[ERROR]: 'then' found outside of if-statement at line %d\n", token.line);
+                    has_errored = true;
+                    break;
+                }
+                uint16_t address = dest->size;
+                dest->size = PopIfStack(&if_statements).address;
+                EmitWord(dest, address);
+                dest->size = address;
                 break;
             }
 
