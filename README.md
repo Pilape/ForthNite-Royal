@@ -38,29 +38,35 @@ becomes
 Writing a number pushes it onto the stack. And + adds together the top elements of the stack and pushes the result.
 
 ### Primitives
-NOP   | ( -- )
-HALT  | ( -- ) Stops execution
-DUP   | ( a -- a a )
-OVER  | ( a b -- a b a )
-POP   | ( a -- )
-NIP   | ( a b -- b )
-SWAP  | ( a b -- b a )
-ROT   | ( a b c -- b c a)
-LOAD  | ( a -- ram[a] )
-STORE | ( a b -- ) ram[b] = a
-LOADb | ( a -- (byte)ram[a] )
-STOREb| ( a b -- ) ram[b] = (byte)a
-\+     | ( a b -- a+b ) Sets carry on overflow
-\-     | ( a b -- a-b ) Sets carry on underflow
-ADDc  | ( a b -- a+b+carry ) Sets carry on overflow
-SUBc  | ( a b -- a-b-carry ) Sets carry on underflow
-<<    | ( a b -- a<<b )
-\>\>    | ( a b -- a\>\>b )
-bNAND | ( a b --  ~(a & b))
-NAND  | ( a b -- !(a && b))
-=     | ( a b -- a==b )
-\>     | ( a b -- a>b )
-<     | ( a b -- a<b )
+The stacks are read from left to right. With the righmost element being the top of the stack.
+
+<-----------------------------
+
+|  Name  | Stack before | Stack after  |      Other effects      |
+|:------:|:-------------|:-------------|:------------------------|
+| NOP    |              |              | Does nothing            |
+| HALT   |              |              | Stops execution         |
+| DUP    | a            | a a          |                         |
+| OVER   | a b          | a b a        |                         |
+| POP    | a            |              |                         |
+| NIP    | a b          | b            |                         |
+| SWAP   | a b          | b a          |                         |
+| ROT    | a b c        | b c a        |                         |
+| LOAD   | a            | ram[a]       |                         |
+| STORE  | a b          | ram[b] = a   |                         |
+| LOADb  | a            | (byte)ram[a] |                         |
+| STOREb | a b          |              | ram[b] = (byte)a        |
+| \+     | a b          | a+b          | Sets carry on overflow  |
+| \-     | a b          | a-b          | Sets carry on underflow |
+| ADDc   | a b          | a+b+carry    | Sets carry on overflow  |
+| SUBc   | a b          | a-b-carry    | Sets carry on underflow |
+| <<     | a b          | a<<b         |                         |
+| \>\>   | a b          | a\>\>b       |                         |
+| bNAND  | a b          | ~(a & b))    |                         |
+| NAND   | a b          | !(a && b))   |                         |
+| =      | a b          | a==b         |                         |
+| \>     | a b          | a>b          |                         |
+| <      | a b          | a<b          |                         |
 
 ### Functions/Words
 
