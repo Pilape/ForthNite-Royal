@@ -98,5 +98,52 @@ You can overwrite primitives and custom words which generates a warning. You can
 ```
 
 ### If-statements
+We start an if-statement with ```if``` and terminate it with ```then```.
+The condition needs to be handled before hand because the ```if``` primitive pops the top of the stack and branches based on the result.
+```else``` works as normal with it being executed if the if-statement is false.
+```FORTH
+: double_if_zero ( n -- n )
+    dup 0 = if
+        dup +
+    then
+;
+
+: double_if_zero_else_triple ( n -- n )
+    dup 0 = if
+        dup +
+    else
+        dup dup + +
+    then        
+;
+```
 
 ### Loops
+ForthNite does not support for loops.
+A loop is started with ```do```.
+You can repeat the loop with ```again```.
+You can leave the loop with ```leave```.
+You can either have a ```while``` loop or ```until``` loop.
+```while``` loops last until the top of the stack is false.
+```until``` loops last until the top of the stack is true.
+Both consume the top item of the stack each time they get called.
+
+```FORTH
+: increment_to_100 ( n -- 100 )
+    do
+        1 +
+        dup 100 =
+    until
+;
+
+: not ( b -- !b ) dup NAND ;
+
+: decrement_to_0 ( n -- 0 )
+    do
+        1 -
+        dup 0 = not
+    while
+;
+```
+
+### Memory
+You store things in a dedicated RAM area with 64KiB of storage. I don't recommend using the first 32KiB because they are reserved for program memory. Unless you want to try metaprogramming. In which case, please seek help.
